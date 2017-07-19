@@ -1,22 +1,35 @@
 import * as storage from "azure-storage";
 import tl = require('vsts-task-lib/task');
 
+
 let connectionString = tl.getInput("connectionString", true);
 let versionEnv = tl.getInput("versionEnv", true);
 let method = tl.getInput("method", true);
 
-let blobService = storage.createBlobService(connectionString);
 const containerName = 'release';
+const blobName = "lastversion.txt";
+
+
+let blobService = storage.createBlobService(connectionString);
+
+function createBlobService(): Promise<storage.BlobService> {
+    return new Promise<storage.BlobService> ((resolve, reject)=> {
 blobService.createContainerIfNotExists(containerName, function (error, result, response) {
     if (!error) {
         tl.debug("container created or exist");
+        resolve(blobService);
+        
     } else {
         tl.debug(error.message);
+        reject(error);
     }
-});
-const blobName = "lastversion.txt";
+    })
 
-function setLastVersionToEnv() {
+});
+}
+
+
+function setLastVersionToEnv(blobService: storage.BlobService) {
     blobService.getBlobToText(containerName, blobName, function (error, result) {
         if (!error) {
             tl.debug("result: " + result);
@@ -30,12 +43,12 @@ function setLastVersionToEnv() {
     });
 }
 
-function setCurrentVersionToBlob() {
+function setCurrentVersionToBlob(blobService: storage.BlobService) {
     let currentVersion: string = (process.env[versionEnv]) as string;
     currentVersion = typeof currentVersion !== undefined ? currentVersion : "";
 
 
-    blobService.createAppendBlobFromText(containerName, blobName, Buffer.from(currentVersion), (error, result, response) => {
+    blobService.createBlockBlobFromText(containerName, blobName, currentVersion, (error, result, response) => {
         if (!error) {
             tl.debug(`current version has been set to ${currentVersion}`);
         } else {
@@ -45,8 +58,11 @@ function setCurrentVersionToBlob() {
     });
 }
 
-if (method == "get") {
-    setLastVersionToEnv();
+
+createBlobService().then((blobService) => {
+    if (method == "get") {   
+    setLastVersionToEnv(blobService);
 } else {
-    setCurrentVersionToBlob();
+    setCurrentVersionToBlob(blobService);
 }
+})

@@ -14,7 +14,7 @@
   "version": {
     "Major": "0",
     "Minor": "1",
-    "Patch": "0"
+    "Patch": "3"
   },
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "lastversion $(message)",
@@ -36,7 +36,7 @@
     },
     {
       "name": "method",
-      "type": "string",
+      "type": "pickList",
       "label": "Select the method",
       "defaultValue": "get",
       "required": true,
